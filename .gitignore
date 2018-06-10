@@ -4,3 +4,4 @@
 .idea/qmtrader.iml
 .idea/vcs.xml
 .idea/workspace.xml
+*.pyc
