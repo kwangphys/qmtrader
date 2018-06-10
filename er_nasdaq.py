@@ -31,8 +31,28 @@ def get_nasdaq_earnings_calendar(date, browser):
     html_source = browser.page_source
     soup = bs.BeautifulSoup(html_source, "lxml")
     tables = soup.find_all('table')
-    df = parse_table(tables[0])
-    return [parse_row(df.iloc[i]) for i in range(len(df))]
+    df = parse_table(tables[0], has_index=False)
+    df = df[df.columns[1:]]
+    confirmed = [parse_row(df.iloc[i]) for i in range(len(df))]
+    links = tables[0].find_all('a')
+    times = []
+    for link in links:
+        if 'title' not in link.attrs:
+            continue
+        times.append(link.attrs['title'])
+    if len(times) != len(confirmed):
+        raise ValueError('Size mismatch between er times and infos!')
+    for i in range(len(confirmed)):
+        confirmed[i]['time'] = times[i]
+    unconfirmed = []
+    p = tables[1].parent.parent
+    if 'id' in p.attrs and p.attrs['id'] == '_unconfirmed':
+        df = parse_table(tables[1], has_index=False)
+        unconfirmed = [parse_row(df.iloc[i]) for i in range(len(df))]
+    return {
+        'confirmed': confirmed,
+        'unconfirmed': unconfirmed
+    }
 
 
 if __name__ == '__main__':

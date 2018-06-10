@@ -1,6 +1,6 @@
 import pandas as pd
 
-def parse_table(soup, exclude_incomplete_row=True):
+def parse_table(soup, exclude_incomplete_row=True, has_index=True):
     headers = [v.text for v in soup.find_all('th')]
     body = soup.find_all('tbody')
     if len(body) == 0:
@@ -27,7 +27,8 @@ def parse_table(soup, exclude_incomplete_row=True):
         ncol = len(headers)
         row_values = [v for v in row_values if len(v) == ncol]
     df = pd.DataFrame(columns=headers, data=row_values)
-    df.set_index(headers[0], inplace=True, drop=True)
+    if has_index:
+        df.set_index(headers[0], inplace=True, drop=True)
     return df
 
 
