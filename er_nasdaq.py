@@ -13,7 +13,7 @@ def parse_row(row):
     ret['full_name'] = infos[:-len(ticker) - 1].rstrip()
     if ticker[-1] != ')':
         raise ValueError('Failed to parse ' + row[0])
-    ret['ticker'] = ticker[:-1]
+    ret['ticker'] = ticker[:-1].replace('.', '-')
     ret['earnings_date'] = datetime.datetime.strptime(row[1], '%m/%d/%Y')
     ret['fiscal_quarter_ending'] = datetime.datetime.strptime(row[2], '%b %Y').strftime('%Y%m')
     eps = row[3][1:]
@@ -57,7 +57,7 @@ def get_nasdaq_earnings_calendar(date, browser):
 if __name__ == '__main__':
     import pickle
     import os
-    date = datetime.datetime(2018, 6, 11)
+    date = datetime.datetime(2018, 6, 12)
     folder = "E:\\Data\\USFundamentals"
     browser = webdriver.Chrome()
     data = get_nasdaq_earnings_calendar(date, browser)

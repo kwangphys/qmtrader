@@ -25,6 +25,8 @@ def parse_float(s):
         return f * 1e3
     if suffix == '%':
         return f / 100.0
+    if suffix == 'T':
+        return f * 1e12
     raise ValueError('Failed to parse float: ' + str(s))
 
 
@@ -439,13 +441,7 @@ def parse_yahoo_data(ticker, browser):
 
 if __name__ == '__main__':
     tickers = [
-        'PLAY',
-        'DTEA',
-        'KMG',
-        'LMNR',
-        'RH',
-        'SBLK',
-        'YTRA'
+        'XPLR',
     ]
 
     import pickle
