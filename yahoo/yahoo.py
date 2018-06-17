@@ -427,21 +427,43 @@ def parse_news(ticker, browser):
     return news
 
 
-def parse_yahoo_data(ticker, browser):
+def parse_yahoo_data(ticker, browser, ntry=3):
     results = {}
-    results['news'] = parse_news(ticker, browser)
-    results['holders'] = parse_holders(ticker, browser)
-    results['analysis'] = parse_analysis(ticker, browser)
-    results['statistics'] = parse_statistics(ticker, browser)
-    results['financials'] = parse_financials(ticker, browser)
-    results['profile'] = parse_profile(ticker, browser)
-    results['sustainability'] = parse_sustainability(ticker, browser)
+    funcs = [
+        ('news', parse_news),
+        ('holders', parse_holders),
+        ('analysis', parse_analysis),
+        ('statistics', parse_statistics),
+        ('financials', parse_financials),
+        ('profile', parse_profile),
+        ('sustainability', parse_sustainability),
+    ]
+    for info in funcs:
+        itry = 0
+        while itry < ntry:
+            try:
+                results[info[0]] = info[1](ticker, browser)
+                break
+            except Exception as e:
+                itry += 1
+                if itry >= ntry:
+                    raise e
+                browser.quit()
+                browser = webdriver.Chrome()
+
+    # results['news'] = parse_news(ticker, browser)
+    # results['holders'] = parse_holders(ticker, browser)
+    # results['analysis'] = parse_analysis(ticker, browser)
+    # results['statistics'] = parse_statistics(ticker, browser)
+    # results['financials'] = parse_financials(ticker, browser)
+    # results['profile'] = parse_profile(ticker, browser)
+    # results['sustainability'] = parse_sustainability(ticker, browser)
     return results
 
 
 if __name__ == '__main__':
     tickers = [
-        'XPLR',
+        'TSLA',
     ]
 
     import pickle
