@@ -12,6 +12,11 @@ def get_nasdaq_er_filename(folder, date):
     return os.path.join(folder, 'er_nasdaq_' + datestr + '.pkl')
 
 
+def get_yahoo_er_filename(folder, date):
+    datestr = date.strftime('%Y%m%d')
+    return os.path.join(folder, 'er_yahoo_' + datestr + '.pkl')
+
+
 def get_yahoo_fundamental_filename(folder, date, ticker):
     datestr = date.strftime('%Y%m%d')
     subfolder = os.path.join(folder, datestr)
@@ -20,20 +25,21 @@ def get_yahoo_fundamental_filename(folder, date, ticker):
 
 def scrape_raw_data(folder, date):
     browser = webdriver.Chrome()
-    ercal = get_nasdaq_earnings_calendar(date, browser)
     datestr = date.strftime('%Y%m%d')
-    pickle.dump(ercal, open(get_nasdaq_er_filename(folder, date), 'wb'))
+    er_nasdaq_cal = get_nasdaq_earnings_calendar(date, browser)
+    nasdaq_tickers = [v['ticker'] for v in er_nasdaq_cal['confirmed']] + [v['ticker'] for v in er_nasdaq_cal['unconfirmed']]
+    if len(nasdaq_tickers) > 0:
+        pickle.dump(er_nasdaq_cal, open(get_nasdaq_er_filename(folder, date), 'wb'))
+    er_yahoo_cal = parse_yahoo_earnings_calendar(date, browser)
+    yahoo_tickers = [v['ticker'] for v in er_yahoo_cal]
+    if len(yahoo_tickers) > 0:
+        pickle.dump(er_yahoo_cal, open(get_yahoo_er_filename(folder, date), 'wb'))
     subfolder = os.path.join(folder, datestr)
     if not os.path.exists(subfolder):
         os.makedirs(subfolder)
-    for info in ercal['confirmed']:
-        ticker = info['ticker']
-        ticker_filename = get_yahoo_fundamental_filename(folder, date, ticker)
-        print('Processing', ticker)
-        results = parse_yahoo_data(ticker, browser)
-        pickle.dump(results, open(ticker_filename, 'wb'))
-    for info in ercal['unconfirmed']:
-        ticker = info['ticker']
+    tickers = list(set(nasdaq_tickers + yahoo_tickers))
+    tickers.sort()
+    for ticker in tickers:
         ticker_filename = get_yahoo_fundamental_filename(folder, date, ticker)
         print('Processing', ticker)
         results = parse_yahoo_data(ticker, browser)
@@ -79,7 +85,7 @@ if __name__ == '__main__':
     import os
     import datetime
 
-    date = datetime.datetime(2018, 6, 11)
+    date = datetime.datetime(2018, 6, 18)
     folder = "X:\\Trading\\USFundamentals"
-    # scrape_raw_data(folder, date)
+    scrape_raw_data(folder, date)
     nasdaq_earnings_calendar_to_db(folder, date)
