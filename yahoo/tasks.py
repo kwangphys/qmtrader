@@ -53,7 +53,7 @@ def nasdaq_earnings_calendar_to_db(folder, date):
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
     data = pickle.load(open(filename, 'rb'))
     for item in data['confirmed']:
-        record = NasdaqEarningsCalendar(
+        record = EarningsCalendar(
             updated_on=create_time,
             is_confirmed=True,
             ticker=item['ticker'],
@@ -62,11 +62,12 @@ def nasdaq_earnings_calendar_to_db(folder, date):
             earnings_date=item['earnings_date'].date(),
             time=item['time'],
             consensus_eps_forecast=item['consensus_eps_forecast'],
-            n_estimates=item['n_estimates']
+            n_estimates=item['n_estimates'],
+            source='Nasdaq'
         )
         record.save()
     for item in data['unconfirmed']:
-        record = NasdaqEarningsCalendar(
+        record = EarningsCalendar(
             updated_on=create_time,
             is_confirmed=False,
             ticker=item['ticker'],
@@ -75,7 +76,8 @@ def nasdaq_earnings_calendar_to_db(folder, date):
             earnings_date=item['earnings_date'].date(),
             consensus_eps_forecast=item['consensus_eps_forecast'],
             n_estimates=item['n_estimates'],
-            time='N/A'
+            time='N/A',
+            source='Nasdaq'
         )
         record.save()
 
