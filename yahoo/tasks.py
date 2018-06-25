@@ -1,6 +1,7 @@
 import pickle
 import os
 import datetime
+import math
 from yahoo.models import *
 from selenium import webdriver
 from yahoo.er_nasdaq import *
@@ -61,7 +62,7 @@ def nasdaq_earnings_calendar_to_db(folder, date):
             fiscal_quarter_ending=item['fiscal_quarter_ending'],
             earnings_date=item['earnings_date'].date(),
             time=item['time'],
-            consensus_eps_forecast=item['consensus_eps_forecast'],
+            consensus_eps_forecast=None if math.isnan(item['consensus_eps_forecast']) else item['consensus_eps_forecast'],
             n_estimates=item['n_estimates'],
             source='Nasdaq'
         )
@@ -74,7 +75,7 @@ def nasdaq_earnings_calendar_to_db(folder, date):
             full_name=item['full_name'],
             fiscal_quarter_ending=item['fiscal_quarter_ending'],
             earnings_date=item['earnings_date'].date(),
-            consensus_eps_forecast=item['consensus_eps_forecast'],
+            consensus_eps_forecast=None if math.isnan(item['consensus_eps_forecast']) else item['consensus_eps_forecast'],
             n_estimates=item['n_estimates'],
             time='N/A',
             source='Nasdaq'
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     import os
     import datetime
 
-    date = datetime.datetime(2018, 6, 18)
+    date = datetime.datetime(2018, 6, 26)
     folder = "X:\\Trading\\USFundamentals"
-    scrape_raw_data(folder, date)
+    # scrape_raw_data(folder, date)
     nasdaq_earnings_calendar_to_db(folder, date)
