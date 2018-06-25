@@ -85,6 +85,7 @@ DATABASES = {
         'PASSWORD': os.environ['QM_DB_PASSWD'],
         'HOST': os.environ['QM_DB_HOST'],
         'PORT': 3306,
+        'OPTIONS': {'use_pure': True}
     }
 }
 
