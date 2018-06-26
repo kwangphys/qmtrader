@@ -19,7 +19,7 @@ class EarningsCalendar(DatedModel):
     earnings_date = dm.DateField(null=False)
     time = dm.CharField(max_length=32)
     consensus_eps_forecast = dm.FloatField(null=True)
-    n_estimates = dm.IntegerField()
-    is_confirmed = dm.BooleanField()
+    n_estimates = dm.IntegerField(null=True)
+    is_confirmed = dm.NullBooleanField()
     source = dm.CharField(max_length=16)
 

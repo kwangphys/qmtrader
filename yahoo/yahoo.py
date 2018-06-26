@@ -455,13 +455,6 @@ def parse_yahoo_data(ticker, browser, ntry=3):
     if has_error:
         browser.quit()
 
-    # results['news'] = parse_news(ticker, browser)
-    # results['holders'] = parse_holders(ticker, browser)
-    # results['analysis'] = parse_analysis(ticker, browser)
-    # results['statistics'] = parse_statistics(ticker, browser)
-    # results['financials'] = parse_financials(ticker, browser)
-    # results['profile'] = parse_profile(ticker, browser)
-    # results['sustainability'] = parse_sustainability(ticker, browser)
     return results, has_error
 
 
@@ -488,7 +481,7 @@ def parse_yahoo_earnings_calendar(date, browser):
             'ticker':               item['ticker'],
             'company':              item['companyshortname'],
             'earnings_date':        date,
-            'earnings_call_time':   'After Market Close' if ecall == 'AMC' else 'Before Market Open' if ecall == 'BMO' else 'Time Not Supplied' if ecall == 'TNS' else None,
+            'earnings_call_time':   'After Market Close' if ecall == 'AMC' else 'Before Market Open' if ecall == 'BMO' else 'Time Not Supplied' if ecall == 'TNS' else item['startdatetime'].split('T')[-1].split('.')[0] if ecall == 'TAS' else None,
             'eps_estimate':         item['epsestimate']
         })
     return data
