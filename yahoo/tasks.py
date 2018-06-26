@@ -43,8 +43,14 @@ def scrape_raw_data(folder, date):
     for ticker in tickers:
         ticker_filename = get_yahoo_fundamental_filename(folder, date, ticker)
         print('Processing', ticker)
-        results = parse_yahoo_data(ticker, browser)
-        pickle.dump(results, open(ticker_filename, 'wb'))
+        try:
+            results, has_error = parse_yahoo_data(ticker, browser)
+            pickle.dump(results, open(ticker_filename, 'wb'))
+            if has_error:
+                browser = webdriver.Chrome()
+        except Exception as e:
+            print(e)
+            browser = webdriver.Chrome()
     browser.quit()
     print('Done')
 
@@ -88,7 +94,7 @@ if __name__ == '__main__':
     import os
     import datetime
 
-    date = datetime.datetime(2018, 6, 26)
+    date = datetime.datetime(2018, 6, 27)
     folder = "X:\\Trading\\USFundamentals"
-    # scrape_raw_data(folder, date)
-    nasdaq_earnings_calendar_to_db(folder, date)
+    scrape_raw_data(folder, date)
+    # nasdaq_earnings_calendar_to_db(folder, date)

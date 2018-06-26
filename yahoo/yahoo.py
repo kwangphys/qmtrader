@@ -437,6 +437,7 @@ def parse_yahoo_data(ticker, browser, ntry=3):
         ('profile', parse_profile),
         ('sustainability', parse_sustainability),
     ]
+    has_error = False
     for info in funcs:
         itry = 0
         while itry < ntry:
@@ -444,11 +445,15 @@ def parse_yahoo_data(ticker, browser, ntry=3):
                 results[info[0]] = info[1](ticker, browser)
                 break
             except Exception as e:
+                has_error=True
                 itry += 1
                 if itry >= ntry:
+                    browser.quit()
                     raise e
                 browser.quit()
                 browser = webdriver.Chrome()
+    if has_error:
+        browser.quit()
 
     # results['news'] = parse_news(ticker, browser)
     # results['holders'] = parse_holders(ticker, browser)
@@ -457,7 +462,7 @@ def parse_yahoo_data(ticker, browser, ntry=3):
     # results['financials'] = parse_financials(ticker, browser)
     # results['profile'] = parse_profile(ticker, browser)
     # results['sustainability'] = parse_sustainability(ticker, browser)
-    return results
+    return results, has_error
 
 
 def parse_yahoo_earnings_calendar(date, browser):
