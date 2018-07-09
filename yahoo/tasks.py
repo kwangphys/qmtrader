@@ -1,9 +1,9 @@
 import pickle
 import os
 import datetime
+import time
 import math
 from yahoo.models import *
-from selenium import webdriver
 from yahoo.er_nasdaq import *
 from yahoo.yahoo import *
 
@@ -114,8 +114,24 @@ if __name__ == '__main__':
     import os
     import datetime
 
-    date = datetime.datetime(2018, 6, 27)
     folder = "X:\\Trading\\USFundamentals"
-    # scrape_raw_data(folder, date)
+    is_done = False
+    curr_date = datetime.datetime.today().date()
+    while True:
+        now = datetime.datetime.now()
+        print(now)
+        if not is_done and now >= datetime.datetime.combine(curr_date, datetime.time(21, 0, 0)):
+            next_date = curr_date + datetime.timedelta(days=1)
+            if next_date.weekday() >= 5:
+                curr_date = now.date()
+            else:
+                date = datetime.datetime.combine(next_date, datetime.time(0))
+                print('Curr Time:', now, 'Target Date:', date)
+                scrape_raw_data(folder, date)
+                is_done = True
+                curr_date = date.date()
+        elif is_done and now.date() >= curr_date:
+            is_done = False
+        time.sleep(60)
     # nasdaq_earnings_calendar_to_db(folder, date)
-    yahoo_earnings_calendar_to_db(folder, date)
+    # yahoo_earnings_calendar_to_db(folder, date)
