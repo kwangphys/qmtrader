@@ -1,6 +1,7 @@
 import numpy as np
 import datetime
 import json
+import re
 from selenium import webdriver
 import bs4 as bs
 from utils import parse_table
@@ -147,9 +148,11 @@ def parse_statistics(ticker, browser):
         value_type = row[2]
         ret = soup.find_all('span', text=value)
         if len(ret) == 0:
+            ret = soup.find_all('span', text=re.compile('^' + re.escape(value[:-1])))
+        if len(ret) == 0:
             raise RuntimeError('Failed to parse tag ' + str(value))
         if len(ret) > 1:
-            if value != 'Most Recent Quarter':
+            if value not in ['Most Recent Quarter', 'Shares Short']:
                 for r in ret:
                     print(r.text)
                     print(r.prettify())
