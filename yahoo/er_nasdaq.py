@@ -40,10 +40,13 @@ def get_nasdaq_earnings_calendar(date, browser):
             confirmed = [parse_row(df.iloc[i]) for i in range(len(df))]
             links = table.find_all('a')
             times = []
-            for link in links:
-                if 'title' not in link.attrs:
+            for ilink in range(len(links)):
+                if not str(links[ilink]).startswith('<a href="https://www.nasdaq.com/earnings/report/'):
                     continue
-                times.append(link.attrs['title'])
+                if ilink + 1 >= len(links) or str(links[ilink + 1]).startswith('<a href="https://www.nasdaq.com/earnings/report/'):
+                    times.append('N/A')
+                else:
+                    times.append(links[ilink + 1].attrs['title'])
             if len(times) != len(confirmed):
                 raise ValueError('Size mismatch between er times and infos!')
             for i in range(len(confirmed)):
