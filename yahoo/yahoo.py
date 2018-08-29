@@ -5,6 +5,7 @@ import re
 from selenium import webdriver
 import bs4 as bs
 from utils import parse_table
+from selenium.common.exceptions import TimeoutException
 
 
 def parse_float(s):
@@ -63,7 +64,10 @@ def parse_value(value):
 def get_soup(ticker, tab, browser):
     URL = 'https://finance.yahoo.com/quote/{ticker}/{tab}?p={ticker}'
     url = URL.format(ticker=ticker, tab=tab)
-    browser.get(url)
+    try:
+        browser.get(url)
+    except TimeoutException:
+        print('Timeout when accessing ' + url)
     html_source = browser.page_source
     return bs.BeautifulSoup(html_source, "lxml")
 
@@ -465,7 +469,10 @@ def parse_yahoo_earnings_calendar(date, browser):
     URL = 'https://finance.yahoo.com/calendar/earnings?day={datestr}'
     datestr = date.strftime('%Y-%m-%d')
     url = URL.format(datestr=datestr)
-    browser.get(url)
+    try:
+        browser.get(url)
+    except TimeoutException:
+        print('Timeout when accessing ' + url)
     html_source = browser.page_source
     soup = bs.BeautifulSoup(html_source, "lxml")
 
