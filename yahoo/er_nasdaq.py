@@ -2,7 +2,7 @@ import numpy as np
 import datetime
 from selenium import webdriver
 import bs4 as bs
-from utils import parse_table
+from yahoo.utils import parse_table
 
 
 def parse_row(row):
