@@ -333,7 +333,6 @@ class YahooProfileAssetProfile(DatedModel):
 class YahooProfileCompanyOfficers(DatedModel):
 
     ref_earnings = dm.ForeignKey('EarningsCalendar', null=False, on_delete=dm.CASCADE)
-    holder_type = dm.CharField(max_length=16, null=False, blank=False)
     name = dm.CharField(max_length=255, null=False, blank=False)
     title = dm.CharField(max_length=255, blank=True)
     age = dm.IntegerField(null=True)

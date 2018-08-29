@@ -3,6 +3,7 @@ import os
 import datetime
 import time
 import math
+import yahoo.models as models
 from yahoo.models import *
 from yahoo.er_nasdaq import *
 from yahoo.yahoo import *
@@ -107,6 +108,82 @@ def yahoo_earnings_calendar_to_db(folder, date):
             source='Yahoo'
         )
         record.save()
+
+
+def yahoo_data_to_db(data, earnings, create_time):
+    row = YahooStatistics(ref_earnings=earnings, updated_on=create_time, **data['statistics'])
+    row.save()
+    row = YahooNews(ref_earnings=earnings, updated_on=create_time, **data['news'])
+    row.save()
+    row = YahooSustainability(ref_earnings=earnings, updated_on=create_time, **data['sustainability'])
+    row.save()
+
+    data_financials = data['financials']
+    for prefix, ret in data_financials.items():
+        infos = prefix.split('_')
+        row_class = infos[0]
+        row_class[0] = row_class[0].upper()
+        row_class = getattr(models, 'YahooFinancials' + row_class)
+        report_freq = infos[1]
+        report_freq[0] = report_freq[0].upper()
+        for d, r in ret.items():
+            row = row_class(ref_earnings=earnings, updated_on=create_time, report_freq=report_freq, report_date=d, **r)
+            row.save()
+
+    data_analysis = data['analysis']
+    reports = {}
+    for d, r in data_analysis.items():
+        infos = d.split('.')
+        data_type = infos[0].replace('_est', '_estimate')
+        data_type_infos = data_type.split('_')
+        data_type_infos = [t.capitalize() for t in data_type_infos]
+        data_type = ''.join(data_type_infos)
+        if data_type not in reports:
+            reports[data_type] = {}
+        if data_type == 'GrowthEstimate':
+            reports[data_type][infos[-1]] = r
+        else:
+            if infos[1] not in reports[data_type]:
+                reports[data_type][infos[1]] = {}
+            reports[data_type][infos[1]][infos[-1]] = r
+    for d, r in reports.items():
+        if d == 'GrowthEstimate':
+            row = YahooAnalysisGrowthEstimate(ref_earnings=earnings, updated_on=create_time, **r)
+            row.save()
+        else:
+            row_class = getattr(models, 'YahooAnalysis' + d)
+            for report_type, reprot_data in r.items():
+                row = row_class(ref_earnings=earnings, updated_on=create_time, report_type=report_type, **report_data)
+                row.save()
+
+    data_holders = data['holders']
+    for prefix, ret in data_holders.items():
+        if prefix.endswith('_ownership'):
+            owner_type = prefix.split('_')[0]
+            for r in ret:
+                row = YahooHoldersOwnership(ref_earnings=earnings, updated_on=create_time, owner_type=owner_type, **r)
+                row.save()
+        elif prefix.endswith('_holders'):
+            holder_type = prefix.split('_')[0]
+            for r in ret:
+                row = YahooHoldersHolders(ref_earnings=earnings, updated_on=create_time, holder_type=holder_type, **r)
+                row.save()
+        elif prefix == 'insider_transactions':
+            for r in ret:
+                row = YahooHoldersInsiderTransactions(ref_earnings=earnings, updated_on=create_time, **r)
+                row.save()
+        elif prefix == 'net_share_purchase_activity':
+            row = YahooHoldersNetSharePurchaseActivity(ref_earnings=earnings, updated_on=create_time, **ret)
+            row.save()
+        else:
+            raise ValueError('Unknown report: ' + prefix)
+
+    data_profile = data['profile']
+    row = YahooProfileAssetProfile(ref_earnings=earnings, updated_on=create_time, **data_profile['asset_profile'])
+    row.save()
+    for r in data_profile['company_officers']:
+        row = YahooProfileCompanyOfficers(ref_earnings=earnings, updated_on=create_time, **r)
+        row.save()
 
 
 if __name__ == '__main__':
