@@ -2,12 +2,17 @@ import pickle
 import os
 import datetime
 import time
+import pytz
+from tzlocal import get_localzone
 import math
+import numbers
 import yahoo.models as models
 from yahoo.models import *
 from yahoo.er_nasdaq import *
 from yahoo.yahoo import *
 
+
+_LOCAL_ZONE = get_localzone()
 
 def get_nasdaq_er_filename(folder, date):
     datestr = date.strftime('%Y%m%d')
@@ -110,25 +115,40 @@ def yahoo_earnings_calendar_to_db(folder, date):
         record.save()
 
 
+def save_row(row_class, r, earnings, create_time):
+    for key, value in r.items():
+        if value != value:
+            r[key] = None
+        t = row_class._meta.get_field(key).get_internal_type()
+        if t in ['DateTimeField', 'DateField'] and isinstance(value, numbers.Number):
+            v = value / 1000.0 if type(value) == int else value
+            d = datetime.datetime.fromtimestamp(v)
+            d = _LOCAL_ZONE.localize(d).astimezone(pytz.utc)
+            if t == 'DateField':
+                if d.time() != datetime.time(0):
+                    raise ValueError('Date field is actual datetime: ' + str(d))
+                d = d.date()
+            r[key] = d
+    row = row_class(ref_earnings=earnings, updated_on=create_time, **r)
+    row.save()
+
+
 def yahoo_data_to_db(data, earnings, create_time):
-    row = YahooStatistics(ref_earnings=earnings, updated_on=create_time, **data['statistics'])
-    row.save()
-    row = YahooNews(ref_earnings=earnings, updated_on=create_time, **data['news'])
-    row.save()
-    row = YahooSustainability(ref_earnings=earnings, updated_on=create_time, **data['sustainability'])
-    row.save()
+    save_row(YahooStatistics, data['statistics'], earnings, create_time)
+    for r in data['news']:
+        save_row(YahooNews, r, earnings, create_time)
+    save_row(YahooSustainability, data['sustainability'], earnings, create_time)
 
     data_financials = data['financials']
     for prefix, ret in data_financials.items():
         infos = prefix.split('_')
-        row_class = infos[0]
-        row_class[0] = row_class[0].upper()
+        row_class = infos[0].capitalize()
         row_class = getattr(models, 'YahooFinancials' + row_class)
-        report_freq = infos[1]
-        report_freq[0] = report_freq[0].upper()
+        report_freq = infos[1].capitalize()
         for d, r in ret.items():
-            row = row_class(ref_earnings=earnings, updated_on=create_time, report_freq=report_freq, report_date=d, **r)
-            row.save()
+            r['report_freq'] = report_freq
+            r['report_date'] = d
+            save_row(row_class, r, earnings, create_time)
 
     data_analysis = data['analysis']
     reports = {}
@@ -143,47 +163,42 @@ def yahoo_data_to_db(data, earnings, create_time):
         if data_type == 'GrowthEstimate':
             reports[data_type][infos[-1]] = r
         else:
-            if infos[1] not in reports[data_type]:
-                reports[data_type][infos[1]] = {}
-            reports[data_type][infos[1]][infos[-1]] = r
+            if infos[-1] not in reports[data_type]:
+                reports[data_type][infos[-1]] = {}
+            reports[data_type][infos[-1]][infos[1]] = r
     for d, r in reports.items():
         if d == 'GrowthEstimate':
-            row = YahooAnalysisGrowthEstimate(ref_earnings=earnings, updated_on=create_time, **r)
-            row.save()
+            save_row(YahooAnalysisGrowthEstimate, r, earnings, create_time)
         else:
             row_class = getattr(models, 'YahooAnalysis' + d)
-            for report_type, reprot_data in r.items():
-                row = row_class(ref_earnings=earnings, updated_on=create_time, report_type=report_type, **report_data)
-                row.save()
+            for report_type, report_data in r.items():
+                report_data['report_type'] = report_type
+                save_row(row_class, report_data, earnings, create_time)
 
     data_holders = data['holders']
     for prefix, ret in data_holders.items():
         if prefix.endswith('_ownership'):
             owner_type = prefix.split('_')[0]
             for r in ret:
-                row = YahooHoldersOwnership(ref_earnings=earnings, updated_on=create_time, owner_type=owner_type, **r)
-                row.save()
+                r['owner_type'] = owner_type
+                save_row(YahooHoldersOwnership, r, earnings, create_time)
         elif prefix.endswith('_holders'):
             holder_type = prefix.split('_')[0]
             for r in ret:
-                row = YahooHoldersHolders(ref_earnings=earnings, updated_on=create_time, holder_type=holder_type, **r)
-                row.save()
+                r['holder_type'] = holder_type
+                save_row(YahooHoldersHolders, r, earnings, create_time)
         elif prefix == 'insider_transactions':
             for r in ret:
-                row = YahooHoldersInsiderTransactions(ref_earnings=earnings, updated_on=create_time, **r)
-                row.save()
+                save_row(YahooHoldersInsiderTransactions, r, earnings, create_time)
         elif prefix == 'net_share_purchase_activity':
-            row = YahooHoldersNetSharePurchaseActivity(ref_earnings=earnings, updated_on=create_time, **ret)
-            row.save()
+            save_row(YahooHoldersNetSharePurchaseActivity, ret, earnings, create_time)
         else:
             raise ValueError('Unknown report: ' + prefix)
 
     data_profile = data['profile']
-    row = YahooProfileAssetProfile(ref_earnings=earnings, updated_on=create_time, **data_profile['asset_profile'])
-    row.save()
+    save_row(YahooProfileAssetProfile, data_profile['asset_profile'], earnings, create_time)
     for r in data_profile['company_officers']:
-        row = YahooProfileCompanyOfficers(ref_earnings=earnings, updated_on=create_time, **r)
-        row.save()
+        save_row(YahooProfileCompanyOfficers, r, earnings, create_time)
 
 
 if __name__ == '__main__':
@@ -192,6 +207,14 @@ if __name__ == '__main__':
     import datetime
 
     folder = "X:\\Trading\\USFundamentals"
+
+    # from yahoo.models import *
+    # earnings = EarningsCalendar.objects.filter(ticker='ACET').first()
+    # filename = os.path.join(os.path.join(folder, '20180830'), 'ACET.pkl')
+    # data = pickle.load(open(filename, 'rb'))
+    # create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
+    # yahoo_data_to_db(data, earnings, create_time)
+
     is_done = False
     curr_date = datetime.datetime.today().date()
     while True:
@@ -209,6 +232,6 @@ if __name__ == '__main__':
                 curr_date = date.date()
         elif is_done and now.date() >= curr_date:
             is_done = False
-        time.sleep(60)
+        time.sleep(1800)
     # nasdaq_earnings_calendar_to_db(folder, date)
     # yahoo_earnings_calendar_to_db(folder, date)

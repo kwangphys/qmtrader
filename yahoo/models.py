@@ -68,7 +68,7 @@ class YahooStatistics(DatedModel):
     avg_vol_10d = dm.FloatField(null=False)
     shares_outstanding = dm.FloatField(null=False)
     shares_float = dm.FloatField(null=False)
-    insider_hold_ratio = dm.FloatField(null=False)
+    insiders_hold_ratio = dm.FloatField(null=False)
     institutions_hold_ratio = dm.FloatField(null=False)
     shares_short = dm.FloatField(null=False)
     short_ratio = dm.FloatField(null=False)
@@ -79,7 +79,7 @@ class YahooStatistics(DatedModel):
     trailing_annual_dividend_rate = dm.FloatField(null=True)
     trailing_annual_dividend_yield = dm.FloatField(null=True)
     average_dividend_yield_5y = dm.FloatField(null=True)
-    payout_ratio = dm.FloatField(null=False)
+    payout_ratio = dm.FloatField(null=True)
     dividend_date = dm.DateField(null=True)
     ex_dividend_date = dm.DateField(null=True)
     last_split_factor = dm.FloatField(null=True)
@@ -90,7 +90,7 @@ class YahooFinancialsCashflow(DatedModel):
 
     ref_earnings = dm.ForeignKey('EarningsCalendar', null=False, on_delete=dm.CASCADE)
     report_date = dm.DateField(null=False)
-    report_freq = dm.CharField(max_length=1, choices=(('q', 'Quarterly'), ('a', 'Annual')))
+    report_freq = dm.CharField(max_length=9, choices=(('q', 'Quarterly'), ('a', 'Annual')))
     net_income = dm.FloatField(null=True)
     depreciation = dm.FloatField(null=True)
     change_to_netincome = dm.FloatField(null=True)
@@ -103,7 +103,7 @@ class YahooFinancialsCashflow(DatedModel):
     investments = dm.FloatField(null=True)
     other_cashflows_from_investing_activities = dm.FloatField(null=True)
     total_cashflows_from_investing_activities = dm.FloatField(null=False)
-    dividend_paid = dm.FloatField(null=True)
+    dividends_paid = dm.FloatField(null=True)
     sale_purchase_of_stock = dm.FloatField(null=True)
     net_borrowings = dm.FloatField(null=True)
     other_cashflows_from_financing_activities = dm.FloatField(null=True)
@@ -116,7 +116,7 @@ class YahooFinancialsBalance(DatedModel):
 
     ref_earnings = dm.ForeignKey('EarningsCalendar', null=False, on_delete=dm.CASCADE)
     report_date = dm.DateField(null=False)
-    report_freq = dm.CharField(max_length=1, choices=(('q', 'Quarterly'), ('a', 'Annual')))
+    report_freq = dm.CharField(max_length=9, choices=(('q', 'Quarterly'), ('a', 'Annual')))
     cash = dm.FloatField(null=True)
     short_term_investments = dm.FloatField(null=True)
     net_receivables = dm.FloatField(null=True)
@@ -129,9 +129,9 @@ class YahooFinancialsBalance(DatedModel):
     intangible_assets = dm.FloatField(null=True)
     accumulated_amortization = dm.FloatField(null=True)
     other_assets = dm.FloatField(null=True)
-    deferred_long_term_assets = dm.FloatField(null=True)
+    deferred_long_term_asset_charges = dm.FloatField(null=True)
     total_assets = dm.FloatField(null=False)
-    account_payable = dm.FloatField(null=True)
+    accounts_payable = dm.FloatField(null=True)
     short_long_term_debt = dm.FloatField(null=True)
     other_current_liab = dm.FloatField(null=True)
     total_current_liabilities = dm.FloatField(null=False)
@@ -157,7 +157,7 @@ class YahooFinancialsIncome(DatedModel):
 
     ref_earnings = dm.ForeignKey('EarningsCalendar', null=False, on_delete=dm.CASCADE)
     report_date = dm.DateField(null=False)
-    report_freq = dm.CharField(max_length=1, choices=(('q', 'Quarterly'), ('a', 'Annual')))
+    report_freq = dm.CharField(max_length=9, choices=(('q', 'Quarterly'), ('a', 'Annual')))
     total_revenue = dm.FloatField(null=False)
     cost_of_revenue = dm.FloatField(null=True)
     gross_profit = dm.FloatField(null=False)
@@ -175,8 +175,8 @@ class YahooFinancialsIncome(DatedModel):
     minority_interest = dm.FloatField(null=True)
     net_income_from_continuing_ops = dm.FloatField(null=False)
     discontinued_operations = dm.FloatField(null=True)
-    extradinary_items = dm.FloatField(null=True)
-    effect_of_accounting_changes = dm.FloatField(null=True)
+    extraordinary_items = dm.FloatField(null=True)
+    effect_of_accounting_charges = dm.FloatField(null=True)
     other_items = dm.FloatField(null=True)
     net_income = dm.FloatField(null=False)
     preferred_stock_and_other_adjustments = dm.FloatField(null=True)
@@ -216,18 +216,18 @@ class YahooAnalysisEarningsHistory(DatedModel):
     surprise = dm.FloatField(null=True)
 
 
-class YahooAnalysisEPSTrend(DatedModel):
+class YahooAnalysisEpsTrend(DatedModel):
 
     ref_earnings = dm.ForeignKey('EarningsCalendar', null=False, on_delete=dm.CASCADE)
     report_type = dm.CharField(max_length=16, null=False, blank=False)
-    eps_curr = dm.FloatField(null=True)
-    eps_7d = dm.FloatField(null=True)
-    eps_30d = dm.FloatField(null=True)
-    eps_60d = dm.FloatField(null=True)
-    eps_90d = dm.FloatField(null=True)
+    est_curr = dm.FloatField(null=True)
+    est_7d_ago = dm.FloatField(null=True)
+    est_30d_ago = dm.FloatField(null=True)
+    est_60d_ago = dm.FloatField(null=True)
+    est_90d_ago = dm.FloatField(null=True)
 
 
-class YahooAnalysisEPSRevisions(DatedModel):
+class YahooAnalysisEpsRevisions(DatedModel):
 
     ref_earnings = dm.ForeignKey('EarningsCalendar', null=False, on_delete=dm.CASCADE)
     report_type = dm.CharField(max_length=16, null=False, blank=False)
@@ -309,25 +309,26 @@ class YahooHoldersNetSharePurchaseActivity(DatedModel):
 class YahooProfileAssetProfile(DatedModel):
 
     ref_earnings = dm.ForeignKey('EarningsCalendar', null=False, on_delete=dm.CASCADE)
-    long_business_company = dm.CharField(max_length=255, null=False, blank=False)
+    long_business_summary = dm.TextField(blank=True)
     address1 = dm.TextField(blank=True)
     city = dm.CharField(max_length=64, blank=True)
     state = dm.CharField(max_length=16, blank=True)
     country = dm.CharField(max_length=32, blank=True)
     zip = dm.CharField(max_length=8, blank=True)
     phone = dm.CharField(max_length=16, blank=True)
+    fax = dm.CharField(max_length=16, blank=True)
     website = dm.CharField(max_length=255, blank=True)
     industry_symbol = dm.CharField(max_length=16, blank=True)
     industry = dm.CharField(max_length=255, blank=True)
     sector = dm.CharField(max_length=255, blank=True)
     full_time_employees = dm.IntegerField(null=True)
-    governance_epoch_date = dm.DateField(null=True)
-    compensation_as_of_epoch_date = dm.DateField(null=True)
+    governance_epoch_date = dm.DateTimeField(null=True)
+    compensation_as_of_epoch_date = dm.DateTimeField(null=True)
     audit_risk = dm.FloatField(null=True)
     compensation_risk = dm.FloatField(null=True)
     share_holder_rights_risk = dm.FloatField(null=True)
     board_risk = dm.FloatField(null=True)
-    total_risk = dm.FloatField(null=True)
+    overall_risk = dm.FloatField(null=True)
 
 
 class YahooProfileCompanyOfficers(DatedModel):
