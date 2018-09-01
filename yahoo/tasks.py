@@ -64,6 +64,7 @@ def scrape_raw_data(folder, date):
 def nasdaq_earnings_calendar_to_db(folder, date):
     filename = get_nasdaq_er_filename(folder, date)
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
+    create_time = _LOCAL_ZONE.localize(create_time).astimezone(pytz.utc)
     data = pickle.load(open(filename, 'rb'))
     for item in data['confirmed']:
         record = EarningsCalendar(
@@ -129,8 +130,10 @@ def save_row(row_class, r, earnings, create_time):
                     raise ValueError('Date field is actual datetime: ' + str(d))
                 d = d.date()
             r[key] = d
-    row = row_class(ref_earnings=earnings, updated_on=create_time, **r)
-    row.save()
+    row, created = row_class.objects.get_or_create(ref_earnings=earnings, updated_on=create_time, **r)
+    if row is None:
+        raise RuntimeError('Failed to create ' + str(row_class) + ': ' + str(r))
+    return row
 
 
 def yahoo_data_to_db(data, earnings, create_time):
@@ -209,10 +212,11 @@ if __name__ == '__main__':
     folder = "X:\\Trading\\USFundamentals"
 
     # from yahoo.models import *
-    # earnings = EarningsCalendar.objects.filter(ticker='ACET').first()
-    # filename = os.path.join(os.path.join(folder, '20180830'), 'ACET.pkl')
+    # earnings = EarningsCalendar.objects.filter(ticker='AMBA').first()
+    # filename = os.path.join(os.path.join(folder, '20180830'), 'AMBA.pkl')
     # data = pickle.load(open(filename, 'rb'))
     # create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
+    # create_time = _LOCAL_ZONE.localize(create_time).astimezone(pytz.utc)
     # yahoo_data_to_db(data, earnings, create_time)
 
     is_done = False
