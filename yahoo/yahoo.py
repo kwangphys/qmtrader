@@ -514,9 +514,9 @@ def parse_yahoo_post_earnings_calendar(date, browser):
             'company':              item['companyshortname'],
             'earnings_date':        date,
             'earnings_call_time':   'After Market Close' if ecall == 'AMC' else 'Before Market Open' if ecall == 'BMO' else 'Time Not Supplied' if ecall == 'TNS' else item['startdatetime'].split('T')[-1].split('.')[0] if ecall == 'TAS' else None,
-            'eps_estimate':         item['epsestimate'],
-            'eps_actual':           item['epsactual'],
-            'surprise':             item['epssurprisepct']
+            'eps_estimate':         np.nan if item['epsestimate'] is None else item['epsestimate'],
+            'eps_actual':           np.nan if item['epsactual'] is None else item['epsactual'],
+            'surprise':             np.nan if item['epssurprisepct'] is None else item['epssurprisepct']
         })
     return data
 

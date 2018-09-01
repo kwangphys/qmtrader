@@ -14,6 +14,7 @@ from yahoo.yahoo import *
 
 _LOCAL_ZONE = get_localzone()
 
+
 def get_nasdaq_er_filename(folder, date):
     datestr = date.strftime('%Y%m%d')
     return os.path.join(folder, 'er_nasdaq_' + datestr + '.pkl')
@@ -109,14 +110,13 @@ def nasdaq_earnings_calendar_to_db(folder, date):
 
 
 def nasdaq_post_earnings_calendar_to_db(folder, date):
-    filename = get_nasdaq_er_filename(folder, date)
+    filename = get_nasdaq_post_er_filename(folder, date)
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
     create_time = _LOCAL_ZONE.localize(create_time).astimezone(pytz.utc)
     data = pickle.load(open(filename, 'rb'))
     for item in data:
         record, created = EarningsPostCalendar.objects.get_or_create(
             updated_on=create_time,
-            is_confirmed=True,
             ticker=item['ticker'],
             full_name=item['full_name'],
             fiscal_quarter_ending=item['fiscal_quarter_ending'],
@@ -160,7 +160,6 @@ def yahoo_post_earnings_calendar_to_db(folder, date):
     for item in data:
         record, created = EarningsPostCalendar.objects.get_or_create(
             updated_on=create_time,
-            is_confirmed=None,
             ticker=item['ticker'],
             full_name=item['company'],
             fiscal_quarter_ending='N/A',
@@ -168,7 +167,7 @@ def yahoo_post_earnings_calendar_to_db(folder, date):
             time=item['earnings_call_time'] if item['earnings_call_time'] is not None else 'N/A',
             consensus_eps_forecast=None if math.isnan(item['eps_estimate']) else item['eps_estimate'],
             n_estimates=None,
-            eps=None if math.isnan(item['eps']) else item['eps'],
+            eps=None if math.isnan(item['eps_actual']) else item['eps_actual'],
             surprise=None if math.isnan(item['surprise']) else item['surprise'],
             source='Yahoo'
         )
