@@ -24,6 +24,20 @@ class EarningsCalendar(DatedModel):
     source = dm.CharField(max_length=16)
 
 
+class EarningsPostCalendar(DatedModel):
+
+    ticker = dm.CharField(max_length=16, null=False, blank=False)
+    full_name = dm.CharField(max_length=255)
+    fiscal_quarter_ending = dm.CharField(max_length=16, null=False, blank=False)
+    earnings_date = dm.DateField(null=False)
+    time = dm.CharField(max_length=32, blank=True)
+    consensus_eps_forecast = dm.FloatField(null=True)
+    n_estimates = dm.IntegerField(null=True)
+    eps = dm.FloatField(null=True)
+    surprise = dm.FloatField(null=True)
+    source = dm.CharField(max_length=16)
+
+
 class YahooStatistics(DatedModel):
 
     ref_earnings = dm.ForeignKey('EarningsCalendar', null=False, on_delete=dm.CASCADE)

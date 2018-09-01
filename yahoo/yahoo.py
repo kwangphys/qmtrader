@@ -490,6 +490,37 @@ def parse_yahoo_earnings_calendar(date, browser):
     return data
 
 
+def parse_yahoo_post_earnings_calendar(date, browser):
+    URL = 'https://finance.yahoo.com/calendar/earnings?day={datestr}'
+    datestr = date.strftime('%Y-%m-%d')
+    url = URL.format(datestr=datestr)
+    browser.get(url)
+    html_source = browser.page_source
+    soup = bs.BeautifulSoup(html_source, "lxml")
+
+    scripts = soup.find_all('script')
+    for script in scripts:
+        txt = script.text
+        if 'root.App.main' in txt:
+            all_data = json.loads(txt[:-12].split('root.App.main = ')[-1])
+            break
+
+    raw_data = all_data['context']['dispatcher']['stores']['ScreenerResultsStore']['results']['rows']
+    data = []
+    for item in raw_data:
+        ecall = item['startdatetimetype']
+        data.append({
+            'ticker':               item['ticker'],
+            'company':              item['companyshortname'],
+            'earnings_date':        date,
+            'earnings_call_time':   'After Market Close' if ecall == 'AMC' else 'Before Market Open' if ecall == 'BMO' else 'Time Not Supplied' if ecall == 'TNS' else item['startdatetime'].split('T')[-1].split('.')[0] if ecall == 'TAS' else None,
+            'eps_estimate':         item['epsestimate'],
+            'eps_actual':           item['epsactual'],
+            'surprise':             item['epssurprisepct']
+        })
+    return data
+
+
 if __name__ == '__main__':
     tickers = [
         'TSLA',
@@ -499,7 +530,7 @@ if __name__ == '__main__':
     import os
     folder = "E:\\Data\\USFundamentals"
     browser = webdriver.Chrome()
-    # yahoo_calendar = parse_yahoo_earnings_calendar(datetime.datetime(2018, 6, 18), browser)
+    # yahoo_post_calendar = parse_yahoo_post_earnings_calendar(datetime.datetime(2018, 8, 21), browser)
     for ticker in tickers:
         print('Processing', ticker)
         results = parse_yahoo_data(ticker, browser)

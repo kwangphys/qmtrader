@@ -5,7 +5,7 @@ import bs4 as bs
 from yahoo.utils import parse_table
 
 
-def parse_row(row):
+def parse_row(row, is_post=False):
     ret = {}
     row = [r.replace('\n', '').replace('\t', '').strip() for r in row]
     infos = row[0].split('Market Cap')[0].rstrip()
@@ -19,6 +19,16 @@ def parse_row(row):
     eps = row[3][1:]
     ret['consensus_eps_forecast'] = np.nan if eps == 'n/a' else float(eps)
     ret['n_estimates'] = int(row[4])
+    if is_post:
+        eps = row[6][1:]
+        ret['eps'] = np.nan if eps == 'n/a' else float(eps)
+        surprise = row[7]
+        if surprise == 'N/A':
+            ret['surprise'] = np.nan
+        elif surprise == 'Met':
+            ret['surprise'] = 0.0
+        else:
+            ret['surprise'] = float(surprise)
     return ret
 
 
@@ -60,13 +70,31 @@ def get_nasdaq_earnings_calendar(date, browser):
     }
 
 
+def get_nasdaq_post_earnings_calendar(date, browser):
+    URL = 'https://www.nasdaq.com/earnings/earnings-calendar.aspx?date={datestr}'
+    datestr = date.strftime('%Y-%b-%d')
+    url = URL.format(datestr=datestr)
+    browser.get(url)
+    html_source = browser.page_source
+    soup = bs.BeautifulSoup(html_source, "lxml")
+    tables = soup.find_all('table')
+    confirmed = []
+    for table in tables:
+        tpattrs = table.parent.parent.attrs
+        if 'id' in tpattrs and tpattrs['id'] == '_confirmed':
+            df = parse_table(table, has_index=False)
+            df = df[df.columns[1:]]
+            confirmed = [parse_row(df.iloc[i], is_post=True) for i in range(len(df))]
+    return confirmed
+
+
 if __name__ == '__main__':
     import pickle
     import os
-    date = datetime.datetime(2018, 6, 12)
+    date = datetime.datetime(2018, 5, 31)
     folder = "E:\\Data\\USFundamentals"
     browser = webdriver.Chrome()
-    data = get_nasdaq_earnings_calendar(date, browser)
+    data = get_nasdaq_post_earnings_calendar(date, browser)
     browser.quit()
-    pickle.dump(data, open(os.path.join(folder, 'er_nasdaq_' + date.strftime('%Y%m%d') + '.pkl'), 'wb'))
+    pickle.dump(data, open(os.path.join(folder, 'er_nasdaq_post_' + date.strftime('%Y%m%d') + '.pkl'), 'wb'))
     print('Done')

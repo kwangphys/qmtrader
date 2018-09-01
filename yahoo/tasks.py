@@ -19,9 +19,19 @@ def get_nasdaq_er_filename(folder, date):
     return os.path.join(folder, 'er_nasdaq_' + datestr + '.pkl')
 
 
+def get_nasdaq_post_er_filename(folder, date):
+    datestr = date.strftime('%Y%m%d')
+    return os.path.join(folder, 'er_nasdaq_post_' + datestr + '.pkl')
+
+
 def get_yahoo_er_filename(folder, date):
     datestr = date.strftime('%Y%m%d')
     return os.path.join(folder, 'er_yahoo_' + datestr + '.pkl')
+
+
+def get_yahoo_post_er_filename(folder, date):
+    datestr = date.strftime('%Y%m%d')
+    return os.path.join(folder, 'er_yahoo_post_' + datestr + '.pkl')
 
 
 def get_yahoo_fundamental_filename(folder, date, ticker):
@@ -67,7 +77,7 @@ def nasdaq_earnings_calendar_to_db(folder, date):
     create_time = _LOCAL_ZONE.localize(create_time).astimezone(pytz.utc)
     data = pickle.load(open(filename, 'rb'))
     for item in data['confirmed']:
-        record = EarningsCalendar(
+        record, created = EarningsCalendar.objects.get_or_create(
             updated_on=create_time,
             is_confirmed=True,
             ticker=item['ticker'],
@@ -79,9 +89,10 @@ def nasdaq_earnings_calendar_to_db(folder, date):
             n_estimates=item['n_estimates'],
             source='Nasdaq'
         )
-        record.save()
+        if record is None:
+            raise RuntimeError('Failed to save nasdaq earning calendar: ' + str(item))
     for item in data['unconfirmed']:
-        record = EarningsCalendar(
+        record, created = EarningsCalendar.objects.get_or_create(
             updated_on=create_time,
             is_confirmed=False,
             ticker=item['ticker'],
@@ -93,7 +104,32 @@ def nasdaq_earnings_calendar_to_db(folder, date):
             time='N/A',
             source='Nasdaq'
         )
-        record.save()
+        if record is None:
+            raise RuntimeError('Failed to save nasdaq earning calendar: ' + str(item))
+
+
+def nasdaq_post_earnings_calendar_to_db(folder, date):
+    filename = get_nasdaq_er_filename(folder, date)
+    create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
+    create_time = _LOCAL_ZONE.localize(create_time).astimezone(pytz.utc)
+    data = pickle.load(open(filename, 'rb'))
+    for item in data:
+        record, created = EarningsPostCalendar.objects.get_or_create(
+            updated_on=create_time,
+            is_confirmed=True,
+            ticker=item['ticker'],
+            full_name=item['full_name'],
+            fiscal_quarter_ending=item['fiscal_quarter_ending'],
+            earnings_date=item['earnings_date'].date(),
+            time='N/A',
+            consensus_eps_forecast=None if math.isnan(item['consensus_eps_forecast']) else item['consensus_eps_forecast'],
+            n_estimates=item['n_estimates'],
+            eps=None if math.isnan(item['eps']) else item['eps'],
+            surprise=None if math.isnan(item['surprise']) else item['surprise'],
+            source='Nasdaq'
+        )
+        if record is None:
+            raise RuntimeError('Failed to save nasdaq post earning calendar: ' + str(item))
 
 
 def yahoo_earnings_calendar_to_db(folder, date):
@@ -101,7 +137,7 @@ def yahoo_earnings_calendar_to_db(folder, date):
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
     data = pickle.load(open(filename, 'rb'))
     for item in data:
-        record = EarningsCalendar(
+        record, created = EarningsCalendar.objects.get_or_create(
             updated_on=create_time,
             is_confirmed=None,
             ticker=item['ticker'],
@@ -113,7 +149,31 @@ def yahoo_earnings_calendar_to_db(folder, date):
             n_estimates=None,
             source='Yahoo'
         )
-        record.save()
+        if record is None:
+            raise RuntimeError('Failed to save yahoo earning calendar: ' + str(item))
+
+
+def yahoo_post_earnings_calendar_to_db(folder, date):
+    filename = get_yahoo_post_er_filename(folder, date)
+    create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
+    data = pickle.load(open(filename, 'rb'))
+    for item in data:
+        record, created = EarningsPostCalendar.objects.get_or_create(
+            updated_on=create_time,
+            is_confirmed=None,
+            ticker=item['ticker'],
+            full_name=item['company'],
+            fiscal_quarter_ending='N/A',
+            earnings_date=item['earnings_date'],
+            time=item['earnings_call_time'] if item['earnings_call_time'] is not None else 'N/A',
+            consensus_eps_forecast=None if math.isnan(item['eps_estimate']) else item['eps_estimate'],
+            n_estimates=None,
+            eps=None if math.isnan(item['eps']) else item['eps'],
+            surprise=None if math.isnan(item['surprise']) else item['surprise'],
+            source='Yahoo'
+        )
+        if record is None:
+            raise RuntimeError('Failed to save yahoo earning calendar: ' + str(item))
 
 
 def save_row(row_class, r, earnings, create_time):
