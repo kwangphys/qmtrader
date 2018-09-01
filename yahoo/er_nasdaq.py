@@ -1,6 +1,7 @@
 import numpy as np
 import datetime
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 import bs4 as bs
 from yahoo.utils import parse_table
 
@@ -36,7 +37,10 @@ def get_nasdaq_earnings_calendar(date, browser):
     URL = 'https://www.nasdaq.com/earnings/earnings-calendar.aspx?date={datestr}'
     datestr = date.strftime('%Y-%b-%d')
     url = URL.format(datestr=datestr)
-    browser.get(url)
+    try:
+        browser.get(url)
+    except TimeoutException:
+        print('Timeout when loading ' + url)
     html_source = browser.page_source
     soup = bs.BeautifulSoup(html_source, "lxml")
     tables = soup.find_all('table')
@@ -74,7 +78,10 @@ def get_nasdaq_post_earnings_calendar(date, browser):
     URL = 'https://www.nasdaq.com/earnings/earnings-calendar.aspx?date={datestr}'
     datestr = date.strftime('%Y-%b-%d')
     url = URL.format(datestr=datestr)
-    browser.get(url)
+    try:
+        browser.get(url)
+    except TimeoutException:
+        print('Timeout when loading ' + url)
     html_source = browser.page_source
     soup = bs.BeautifulSoup(html_source, "lxml")
     tables = soup.find_all('table')

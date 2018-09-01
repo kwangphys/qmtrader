@@ -3,6 +3,7 @@ import datetime
 import json
 import re
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 import bs4 as bs
 from yahoo.utils import parse_table
 
@@ -63,7 +64,10 @@ def parse_value(value):
 def get_soup(ticker, tab, browser):
     URL = 'https://finance.yahoo.com/quote/{ticker}/{tab}?p={ticker}'
     url = URL.format(ticker=ticker, tab=tab)
-    browser.get(url)
+    try:
+        browser.get(url)
+    except TimeoutException:
+        print('Timeout when loading ' + url)
     html_source = browser.page_source
     return bs.BeautifulSoup(html_source, "lxml")
 
@@ -465,7 +469,10 @@ def parse_yahoo_earnings_calendar(date, browser):
     URL = 'https://finance.yahoo.com/calendar/earnings?day={datestr}'
     datestr = date.strftime('%Y-%m-%d')
     url = URL.format(datestr=datestr)
-    browser.get(url)
+    try:
+        browser.get(url)
+    except TimeoutException:
+        print('Timeout when loading ' + url)
     html_source = browser.page_source
     soup = bs.BeautifulSoup(html_source, "lxml")
 
@@ -494,7 +501,10 @@ def parse_yahoo_post_earnings_calendar(date, browser):
     URL = 'https://finance.yahoo.com/calendar/earnings?day={datestr}'
     datestr = date.strftime('%Y-%m-%d')
     url = URL.format(datestr=datestr)
-    browser.get(url)
+    try:
+        browser.get(url)
+    except TimeoutException:
+        print('Timeout when loading ' + url)
     html_source = browser.page_source
     soup = bs.BeautifulSoup(html_source, "lxml")
 
