@@ -6,6 +6,7 @@ import pytz
 from tzlocal import get_localzone
 import math
 import numbers
+from django.db import transaction
 import yahoo.models as models
 from yahoo.models import *
 from yahoo.er_nasdaq import *
@@ -72,6 +73,7 @@ def scrape_raw_data(folder, date):
     print('Done')
 
 
+@transaction.atomic
 def nasdaq_earnings_calendar_to_db(folder, date):
     filename = get_nasdaq_er_filename(folder, date)
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
@@ -109,6 +111,7 @@ def nasdaq_earnings_calendar_to_db(folder, date):
             raise RuntimeError('Failed to save nasdaq earning calendar: ' + str(item))
 
 
+@transaction.atomic
 def nasdaq_post_earnings_calendar_to_db(folder, date):
     filename = get_nasdaq_post_er_filename(folder, date)
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
@@ -132,6 +135,7 @@ def nasdaq_post_earnings_calendar_to_db(folder, date):
             raise RuntimeError('Failed to save nasdaq post earning calendar: ' + str(item))
 
 
+@transaction.atomic
 def yahoo_earnings_calendar_to_db(folder, date):
     filename = get_yahoo_er_filename(folder, date)
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
@@ -153,6 +157,7 @@ def yahoo_earnings_calendar_to_db(folder, date):
             raise RuntimeError('Failed to save yahoo earning calendar: ' + str(item))
 
 
+@transaction.atomic
 def yahoo_post_earnings_calendar_to_db(folder, date):
     filename = get_yahoo_post_er_filename(folder, date)
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
@@ -195,6 +200,7 @@ def save_row(row_class, r, earnings, create_time):
     return row
 
 
+@transaction.atomic
 def yahoo_data_to_db(data, earnings, create_time):
     save_row(YahooStatistics, data['statistics'], earnings, create_time)
     for r in data['news']:
