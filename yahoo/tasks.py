@@ -76,6 +76,8 @@ def scrape_raw_data(folder, date):
 @transaction.atomic
 def nasdaq_earnings_calendar_to_db(folder, date):
     filename = get_nasdaq_er_filename(folder, date)
+    if not os.path.exists(filename):
+        return
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
     create_time = _LOCAL_ZONE.localize(create_time).astimezone(pytz.utc)
     data = pickle.load(open(filename, 'rb'))
@@ -114,6 +116,8 @@ def nasdaq_earnings_calendar_to_db(folder, date):
 @transaction.atomic
 def nasdaq_post_earnings_calendar_to_db(folder, date):
     filename = get_nasdaq_post_er_filename(folder, date)
+    if not os.path.exists(filename):
+        return
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
     create_time = _LOCAL_ZONE.localize(create_time).astimezone(pytz.utc)
     data = pickle.load(open(filename, 'rb'))
@@ -138,6 +142,8 @@ def nasdaq_post_earnings_calendar_to_db(folder, date):
 @transaction.atomic
 def yahoo_earnings_calendar_to_db(folder, date):
     filename = get_yahoo_er_filename(folder, date)
+    if not os.path.exists(filename):
+        return
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
     data = pickle.load(open(filename, 'rb'))
     for item in data:
@@ -149,7 +155,7 @@ def yahoo_earnings_calendar_to_db(folder, date):
             fiscal_quarter_ending='N/A',
             earnings_date=item['earnings_date'],
             time=item['earnings_call_time'] if item['earnings_call_time'] is not None else 'N/A',
-            consensus_eps_forecast=None if math.isnan(item['eps_estimate']) else item['eps_estimate'],
+            consensus_eps_forecast=item['eps_estimate'],
             n_estimates=None,
             source='Yahoo'
         )
@@ -160,6 +166,8 @@ def yahoo_earnings_calendar_to_db(folder, date):
 @transaction.atomic
 def yahoo_post_earnings_calendar_to_db(folder, date):
     filename = get_yahoo_post_er_filename(folder, date)
+    if not os.path.exists(filename):
+        return
     create_time = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
     data = pickle.load(open(filename, 'rb'))
     for item in data:
@@ -170,7 +178,7 @@ def yahoo_post_earnings_calendar_to_db(folder, date):
             fiscal_quarter_ending='N/A',
             earnings_date=item['earnings_date'],
             time=item['earnings_call_time'] if item['earnings_call_time'] is not None else 'N/A',
-            consensus_eps_forecast=None if math.isnan(item['eps_estimate']) else item['eps_estimate'],
+            consensus_eps_forecast=item['eps_estimate'],
             n_estimates=None,
             eps=None if math.isnan(item['eps_actual']) else item['eps_actual'],
             surprise=None if math.isnan(item['surprise']) else item['surprise'],
@@ -187,12 +195,15 @@ def save_row(row_class, r, earnings, create_time):
         t = row_class._meta.get_field(key).get_internal_type()
         if t in ['DateTimeField', 'DateField'] and isinstance(value, numbers.Number):
             v = value / 1000.0 if type(value) == int else value
-            d = datetime.datetime.fromtimestamp(v)
-            d = _LOCAL_ZONE.localize(d).astimezone(pytz.utc)
-            if t == 'DateField':
-                if d.time() != datetime.time(0):
-                    raise ValueError('Date field is actual datetime: ' + str(d))
-                d = d.date()
+            if v == 0.0:
+                d = None
+            else:
+                d = datetime.datetime.fromtimestamp(v)
+                d = _LOCAL_ZONE.localize(d).astimezone(pytz.utc)
+                if t == 'DateField':
+                    if d.time() != datetime.time(0):
+                        raise ValueError('Date field is actual datetime: ' + str(d))
+                    d = d.date()
             r[key] = d
     row, created = row_class.objects.get_or_create(ref_earnings=earnings, updated_on=create_time, **r)
     if row is None:
@@ -205,7 +216,11 @@ def yahoo_data_to_db(data, earnings, create_time):
     save_row(YahooStatistics, data['statistics'], earnings, create_time)
     for r in data['news']:
         save_row(YahooNews, r, earnings, create_time)
-    save_row(YahooSustainability, data['sustainability'], earnings, create_time)
+    sustainabilities = {}
+    for key, value in data['sustainability'].items():
+        if key != 'related_controversy':  # list of strings
+            sustainabilities[key.replace('.', '_')] = value
+    save_row(YahooSustainability, sustainabilities, earnings, create_time)
 
     data_financials = data['financials']
     for prefix, ret in data_financials.items():
@@ -267,6 +282,32 @@ def yahoo_data_to_db(data, earnings, create_time):
     save_row(YahooProfileAssetProfile, data_profile['asset_profile'], earnings, create_time)
     for r in data_profile['company_officers']:
         save_row(YahooProfileCompanyOfficers, r, earnings, create_time)
+
+
+def daily_write_to_db(date, folder):
+    nasdaq_earnings_calendar_to_db(folder, date)
+    yahoo_earnings_calendar_to_db(folder, date)
+
+    datestr = date.strftime('%Y%m%d')
+    subfolder = os.path.join(folder, datestr)
+    if os.path.exists(subfolder):
+        for filename in os.listdir(subfolder):
+            if filename.endswith('.pkl'):
+                ticker = filename[:-4]
+                fname = os.path.join(subfolder, filename)
+                data = pickle.load(open(fname, 'rb'))
+                create_time = datetime.datetime.fromtimestamp(os.path.getmtime(fname))
+                create_time = _LOCAL_ZONE.localize(create_time).astimezone(pytz.utc)
+                has_earnings = False
+                for source in ['Nasdaq', 'Yahoo']:
+                    earnings = EarningsCalendar.objects.filter(ticker=ticker, earnings_date=date, source=source).order_by('updated_on', 'id')
+                    if earnings.count() > 1:
+                        print('WARNING: Multiple earnings for ' + ticker + '/' + datestr + '/' + source)
+                    if earnings.count() > 0:
+                        has_earnings = True
+                        yahoo_data_to_db(data, earnings.last(), create_time)
+                if not has_earnings:
+                    raise RuntimeError('Failed to find earnings for ' + ticker + '/' + datestr)
 
 
 if __name__ == '__main__':
