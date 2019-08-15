@@ -55,9 +55,9 @@ def get_nasdaq_earnings_calendar(date, browser):
             links = table.find_all('a')
             times = []
             for ilink in range(len(links)):
-                if not str(links[ilink]).startswith('<a href="https://www.nasdaq.com/earnings/report/'):
+                if not str(links[ilink]).startswith('<a href="/earnings/report/'):
                     continue
-                if ilink + 1 >= len(links) or str(links[ilink + 1]).startswith('<a href="https://www.nasdaq.com/earnings/report/'):
+                if ilink + 1 >= len(links) or str(links[ilink + 1]).startswith('<a href="/earnings/report/'):
                     times.append('N/A')
                 else:
                     times.append(links[ilink + 1].attrs['title'])
