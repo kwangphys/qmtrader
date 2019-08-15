@@ -314,6 +314,8 @@ if __name__ == '__main__':
     import pickle
     import os
     import datetime
+    from schedule import Scheduler
+    from django import db
 
     folder = "X:\\Trading\\USFundamentals"
 
@@ -325,23 +327,44 @@ if __name__ == '__main__':
     # create_time = _LOCAL_ZONE.localize(create_time).astimezone(pytz.utc)
     # yahoo_data_to_db(data, earnings, create_time)
 
-    is_done = False
-    curr_date = datetime.datetime.today().date()
-    while True:
+    def run_daily_job():
+        curr_date = datetime.datetime.today().date()
+        next_date = curr_date + datetime.timedelta(days=1)
+        if next_date.weekday() >= 5:
+            return
+        date = datetime.datetime.combine(next_date, datetime.time(0))
         now = datetime.datetime.now()
-        print(now)
-        if not is_done and now >= datetime.datetime.combine(curr_date, datetime.time(21, 0, 0)):
-            next_date = curr_date + datetime.timedelta(days=1)
-            if next_date.weekday() >= 5:
-                curr_date = now.date()
-            else:
-                date = datetime.datetime.combine(next_date, datetime.time(0))
-                print('Curr Time:', now, 'Target Date:', date)
-                scrape_raw_data(folder, date)
-                is_done = True
-                curr_date = date.date()
-        elif is_done and now.date() >= curr_date:
-            is_done = False
-        time.sleep(1800)
-    # nasdaq_earnings_calendar_to_db(folder, date)
-    # yahoo_earnings_calendar_to_db(folder, date)
+        print('Curr Time:', now, 'Target Date:', date)
+        scrape_raw_data(folder, date)
+        daily_write_to_db(date, folder)
+        print('Written to db!')
+        db.connection.close()
+
+    scheduler = Scheduler()
+    scheduler.every().day.at("21:00").do(run_daily_job)
+    while True:
+        scheduler.run_pending()
+        time.sleep(300)
+
+    # is_done = False
+    # curr_date = datetime.datetime.today().date()
+    # while True:
+    #     now = datetime.datetime.now()
+    #     print(now)
+    #     if not is_done and now >= datetime.datetime.combine(curr_date, datetime.time(21, 0, 0)):
+    #         next_date = curr_date + datetime.timedelta(days=1)
+    #         if next_date.weekday() >= 5:
+    #             curr_date = now.date()
+    #         else:
+    #             date = datetime.datetime.combine(next_date, datetime.time(0))
+    #             print('Curr Time:', now, 'Target Date:', date)
+    #             scrape_raw_data(folder, date)
+    #             daily_write_to_db(date, folder)
+    #             print('Written to db!')
+    #             is_done = True
+    #             curr_date = date.date()
+    #     elif is_done and now.date() >= curr_date:
+    #         is_done = False
+    #     time.sleep(1800)
+    # # nasdaq_earnings_calendar_to_db(folder, date)
+    # # yahoo_earnings_calendar_to_db(folder, date)
