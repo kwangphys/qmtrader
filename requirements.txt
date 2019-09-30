@@ -1,0 +1,8 @@
+beautifulsoup4==4.8.0
+selenium==3.141.0
+django==2.2.5
+mysqlclient==1.4.4
+mysql-connector-python==8.0.17
+tzlocal==2.0.0
+pandas==0.25.1
+numpy==1.17.2
